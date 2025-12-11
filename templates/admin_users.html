@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление пользователями - Админ-панель</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .user-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .status-active {
+            color: green;
+            font-weight: bold;
+        }
+        .status-inactive {
+            color: red;
+            font-weight: bold;
+        }
+        .search-box {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="/admin" class="logo">👑 Админ-панель</a>
+            <div class="nav-links">
+                <a href="/admin">📊 Статистика</a>
+                <a href="/admin/users" class="active">👥 Пользователи</a>
+                <a href="/admin/plans">📋 Планы</a>
+                <div class="user-info">
+                    <span>👑 {{ current_user.username }}</span>
+                    <a href="/logout" class="btn-logout">🚪 Выйти</a>
+                </div>
+            </div>
+        </nav>
+
+        <h1>👥 Управление пользователями</h1>
+        
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Поиск по email или имени..." 
+                   style="width: 300px; padding: 10px;">
+            <select id="roleFilter" style="padding: 10px; margin-left: 10px;">
+                <option value="">Все роли</option>
+                <option value="user">👤 Пользователи</option>
+                <option value="admin">👑 Администраторы</option>
+            </select>
+            <select id="statusFilter" style="padding: 10px; margin-left: 10px;">
+                <option value="">Все статусы</option>
+                <option value="true">✅ Активные</option>
+                <option value="false">❌ Неактивные</option>
+            </select>
+            <button onclick="searchUsers()" class="btn">🔍 Поиск</button>
+        </div>
+
+        <div id="usersTableContainer">
+            <p>Загрузка пользователей...</p>
+        </div>
+
+        <div style="margin-top: 30px; padding: 20px; background: #f1f8ff; border-radius: 10px;">
+            <h3>📝 Создать нового пользователя (админ)</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <input type="email" id="newUserEmail" placeholder="Email">
+                <input type="text" id="newUserUsername" placeholder="Имя пользователя">
+                <input type="text" id="newUserFullName" placeholder="Полное имя">
+                <input type="password" id="newUserPassword" placeholder="Пароль">
+                <select id="newUserRole" style="padding: 10px;">
+                    <option value="user">👤 Обычный пользователь</option>
+                    <option value="admin">👑 Администратор</option>
+                </select>
+                <button onclick="createAdminUser()" class="btn btn-primary">➕ Создать пользователя</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let token = "{{ token }}";
+        
+        async function loadUsers(filters = {}) {
+            try {
+                let url = '/api/admin/users?';
+                if (filters.search) url += `search=${filters.search}&`;
+                if (filters.role) url += `role=${filters.role}&`;
+                if (filters.is_active !== undefined) url += `is_active=${filters.is_active}&`;
+                
+                const response = await fetch(url, {
+                    headers: {'Authorization': 'Bearer ' + token}
+                });
+                
+                if (!response.ok) throw new Error('Ошибка загрузки');
+                
+                const users = await response.json();
+                const container = document.getElementById('usersTableContainer');
+                
+                if (users.length === 0) {
+                    container.innerHTML = '<p>Пользователей не найдено</p>';
+                    return;
+                }
+                
+                let html = '<table class="user-table"><thead><tr>' +
+                    '<th>ID</th><th>Имя</th><th>Email</th><th>Роль</th>' +
+                    '<th>Статус</th><th>Дата регистрации</th><th>Действия</th></tr></thead><tbody>';
+                
+                users.forEach(user => {
+                    const regDate = new Date(user.created_at).toLocaleDateString('ru-RU');
+                    const roleText = user.role === 'admin' ? '👑 Админ' : '👤 Пользователь';
+                    const statusText = user.is_active ? 
+                        '<span class="status-active">✅ Активен</span>' : 
+                        '<span class="status-inactive">❌ Неактивен</span>';
+                    
+                    html += `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td><strong>${user.username}</strong><br><small>${user.full_name || ''}</small></td>
+                        <td>${user.email}</td>
+                        <td>${roleText}</td>
+                        <td>${statusText}</td>
+                        <td>${regDate}</td>
+                        <td>
+                            <div class="user-actions">
+                                <button class="btn btn-sm" onclick="toggleUserRole(${user.id}, '${user.role}')">
+                                    ${user.role === 'admin' ? '👤 Сделать user' : '👑 Сделать admin'}
+                                </button>
+                                <button class="btn btn-sm" onclick="toggleUserStatus(${user.id}, ${user.is_active})">
+                                    ${user.is_active ? '❌ Деактивировать' : '✅ Активировать'}
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">
+                                    🗑️ Удалить
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Ошибка:', error);
+                document.getElementById('usersTableContainer').innerHTML = 
+                    '<div class="message error">❌ Ошибка загрузки пользователей</div>';
+            }
+        }
+        
+        async function toggleUserRole(userId, currentRole) {
+            const newRole = currentRole === 'admin' ? 'user' : 'admin';
+            
+            if (!confirm(`Изменить роль пользователя на "${newRole}"?`)) return;
+            
+            try {
+                const response = await fetch(`/api/admin/users/${userId}/role`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ role: newRole })
+                });
+                
+                if (response.ok) {
+                    alert('Роль пользователя изменена');
+                    loadUsers();
+                } else {
+                    alert('Ошибка при изменении роли');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка при изменении роли');
+            }
+        }
+        
+        async function toggleUserStatus(userId, isActive) {
+            const newStatus = !isActive;
+            const action = newStatus ? 'активировать' : 'деактивировать';
+            
+            if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} пользователя?`)) return;
+            
+            try {
+                const response = await fetch(`/api/admin/users/${userId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ is_active: newStatus })
+                });
+                
+                if (response.ok) {
+                    alert(`Статус пользователя изменен`);
+                    loadUsers();
+                } else {
+                    alert('Ошибка при изменении статуса');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка при изменении статуса');
+            }
+        }
+        
+        async function deleteUser(userId) {
+            if (!confirm('ВНИМАНИЕ! Удаление пользователя приведет к удалению всех его планов тренировок. Продолжить?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/admin/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: {'Authorization': 'Bearer ' + token}
+                });
+                
+                if (response.ok) {
+                    alert('Пользователь удален');
+                    loadUsers();
+                } else {
+                    alert('Ошибка при удалении пользователя');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка при удалении пользователя');
+            }
+        }
+        
+        async function createAdminUser() {
+            const email = document.getElementById('newUserEmail').value;
+            const username = document.getElementById('newUserUsername').value;
+            const fullName = document.getElementById('newUserFullName').value;
+            const password = document.getElementById('newUserPassword').value;
+            const role = document.getElementById('newUserRole').value;
+            
+            if (!email || !username || !password) {
+                alert('Заполните обязательные поля: email, имя пользователя и пароль');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/admin/users/create', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        username: username,
+                        full_name: fullName || null,
+                        password: password,
+                        role: role
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Пользователь создан');
+                    // Очищаем форму
+                    document.getElementById('newUserEmail').value = '';
+                    document.getElementById('newUserUsername').value = '';
+                    document.getElementById('newUserFullName').value = '';
+                    document.getElementById('newUserPassword').value = '';
+                    loadUsers();
+                } else {
+                    const error = await response.json();
+                    alert(`Ошибка: ${error.detail || 'Неизвестная ошибка'}`);
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка при создании пользователя');
+            }
+        }
+        
+        function searchUsers() {
+            const search = document.getElementById('searchInput').value;
+            const role = document.getElementById('roleFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            
+            const filters = {};
+            if (search) filters.search = search;
+            if (role) filters.role = role;
+            if (status !== '') filters.is_active = status === 'true';
+            
+            loadUsers(filters);
+        }
+        
+        window.onload = () => loadUsers();
+    </script>
+</body>
+</html>

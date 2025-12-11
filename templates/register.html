@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация - Fitness Tracker</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .register-container {
+            max-width: 500px;
+            margin: 30px auto;
+        }
+        
+        .register-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .form-card {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .password-hint {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="/" class="logo">💪 FitnessTracker</a>
+            <a href="/" class="back-link">← На главную</a>
+        </nav>
+
+        <div class="register-container">
+            <div class="register-header">
+                <h1>📝 Создать аккаунт</h1>
+                <p>Присоединяйтесь к нашему сообществу</p>
+            </div>
+
+            <div class="form-card">
+                {% if error %}
+                <div class="message error">
+                    ❌ Пользователь с таким email или именем уже существует
+                </div>
+                {% endif %}
+
+                <form method="POST" action="/register">
+                    <div class="form-group">
+                        <label for="email">Email адрес:</label>
+                        <input type="email" id="email" name="email" required 
+                               placeholder="example@email.com">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="username">Имя пользователя:</label>
+                        <input type="text" id="username" name="username" required 
+                               placeholder="Придумайте уникальное имя" 
+                               minlength="3" maxlength="50">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="full_name">Полное имя (необязательно):</label>
+                        <input type="text" id="full_name" name="full_name" 
+                               placeholder="Иван Иванов">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Пароль:</label>
+                        <input type="password" id="password" name="password" required 
+                               placeholder="Не менее 6 символов" 
+                               minlength="6">
+                        <div class="password-hint">Минимум 6 символов</div>
+                    </div>
+
+                    <button type="submit" class="btn" style="width: 100%; background: #2ecc71;">
+                        🚀 Создать аккаунт
+                    </button>
+                </form>
+
+                <div style="text-align: center; margin-top: 25px; padding-top: 25px; border-top: 1px solid #eee;">
+                    <p>Уже есть аккаунт? <a href="/login">Войдите в систему</a></p>
+                    <p><small>Регистрируясь, вы соглашаетесь с нашими <a href="#">условиями использования</a></small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ plan.title }} - Fitness Tracker</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo">💪 Fitness Tracker</a>
+        <div class="nav-links">
+            <a href="/dashboard">📋 Мои планы</a>
+            {% if current_user.role == 'admin' %}
+            <a href="/admin">👑 Админ-панель</a>
+            {% endif %}
+            <div class="user-info">
+                <span>👤 {{ current_user.username }}</span>
+                <a href="/logout" class="btn-logout">🚪 Выйти</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="plan-header">
+            <div>
+                <h1>{{ plan.title }}</h1>
+                <div class="plan-meta">
+                    <span class="difficulty-badge {{ plan.difficulty }}">
+                        {% if plan.difficulty == 'beginner' %}🟢 Начинающий
+                        {% elif plan.difficulty == 'intermediate' %}🟡 Средний
+                        {% elif plan.difficulty == 'advanced' %}🔴 Продвинутый
+                        {% else %}⚪ Не указано{% endif %}
+                    </span>
+                    <span>📅 Создан: {{ plan.created_at.strftime('%d.%m.%Y') }}</span>
+                    <span>⏱ {{ plan.duration_weeks }} недель</span>
+                    <span>{% if plan.is_public %}🌍 Публичный{% else %}🔒 Приватный{% endif %}</span>
+                </div>
+            </div>
+            <div class="plan-actions">
+                <a href="/dashboard" class="btn btn-secondary">← Назад</a>
+                <button class="btn btn-danger" onclick="deletePlan()">🗑️ Удалить план</button>
+            </div>
+        </div>
+        
+        {% if plan.description %}
+        <div class="plan-description">
+            <h3>📝 Описание</h3>
+            <p>{{ plan.description }}</p>
+        </div>
+        {% endif %}
+        
+        <div class="exercises-section">
+            <div class="section-header">
+                <h2>💪 Упражнения</h2>
+                <button class="btn btn-primary" onclick="showAddExerciseModal()">➕ Добавить упражнение</button>
+            </div>
+            
+            {% if exercises %}
+            <div class="exercises-list">
+                {% for exercise in exercises %}
+                <div class="exercise-card">
+                    <div class="exercise-header">
+                        <h3>{{ exercise.name }}</h3>
+                        <span class="exercise-order">#{{ exercise.order }}</span>
+                    </div>
+                    
+                    {% if exercise.description %}
+                    <p class="exercise-description">{{ exercise.description }}</p>
+                    {% endif %}
+                    
+                    <div class="exercise-details">
+                        {% if exercise.sets %}<span>🔢 Подходов: {{ exercise.sets }}</span>{% endif %}
+                        {% if exercise.reps %}<span>🔄 Повторений: {{ exercise.reps }}</span>{% endif %}
+                        {% if exercise.rest_seconds %}<span>⏸️ Отдых: {{ exercise.rest_seconds }} сек</span>{% endif %}
+                    </div>
+                    
+                    <!-- ОСТАВЛЯЕМ только работающие кнопки -->
+                    <div class="exercise-actions">
+                        <button class="btn btn-sm btn-danger" onclick="deleteExercise({{ exercise.id }})">🗑️ Удалить</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <p>В этом плане еще нет упражнений</p>
+                <button class="btn btn-primary" onclick="showAddExerciseModal()">➕ Добавить первое упражнение</button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Модальное окно добавления упражнения -->
+    <div id="addExerciseModal" class="modal">
+        <div class="modal-content">
+            <h2>➕ Добавить упражнение</h2>
+            <form id="addExerciseForm">
+                <input type="text" name="name" placeholder="Название упражнения" required>
+                <textarea name="description" placeholder="Описание (необязательно)"></textarea>
+                <div class="form-row">
+                    <input type="number" name="sets" placeholder="Подходы" min="1" max="20">
+                    <input type="text" name="reps" placeholder="Повторения (например: 10-12)">
+                </div>
+                <div class="form-row">
+                    <input type="number" name="rest_seconds" placeholder="Отдых (секунды)" min="0" max="600">
+                    <input type="number" name="order" placeholder="Порядок" min="0" value="0">
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddExerciseModal()">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const token = "{{ token }}";
+        const planId = {{ plan.id }};
+        
+        // Удаление плана
+        async function deletePlan() {
+            if (!confirm('ВНИМАНИЕ! Удаление плана приведет к удалению всех упражнений. Продолжить?')) return;
+            
+            try {
+                const response = await fetch(`/api/workout-plans/${planId}`, {
+                    method: 'DELETE',
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                
+                if (response.ok) {
+                    alert('План удален');
+                    window.location.href = '/dashboard';
+                } else {
+                    alert('Ошибка при удалении плана');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка при удалении плана');
+            }
+        }
+        
+        // Удаление упражнения (работает - endpoint есть)
+        async function deleteExercise(exerciseId) {
+            if (!confirm('Удалить это упражнение?')) return;
+            
+            try {
+                const response = await fetch(`/api/exercises/${exerciseId}`, {
+                    method: 'DELETE',
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                
+                if (response.ok) {
+                    alert('Упражнение удалено');
+                    location.reload();
+                } else {
+                    alert('Ошибка при удалении упражнения');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка при удалении упражнения');
+            }
+        }
+        
+        // Модальное окно добавления упражнения
+        function showAddExerciseModal() {
+            document.getElementById('addExerciseModal').style.display = 'block';
+        }
+        
+        function closeAddExerciseModal() {
+            document.getElementById('addExerciseModal').style.display = 'none';
+        }
+        
+        // Добавление упражнения
+        document.getElementById('addExerciseForm').onsubmit = async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const exerciseData = {
+                name: formData.get('name'),
+                description: formData.get('description'),
+                sets: formData.get('sets') ? parseInt(formData.get('sets')) : null,
+                reps: formData.get('reps') || null,
+                rest_seconds: formData.get('rest_seconds') ? parseInt(formData.get('rest_seconds')) : null,
+                order: formData.get('order') ? parseInt(formData.get('order')) : 0,
+                workout_plan_id: planId
+            };
+            
+            try {
+                const response = await fetch('/api/exercises/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(exerciseData)
+                });
+                
+                if (response.ok) {
+                    alert('Упражнение добавлено!');
+                    closeAddExerciseModal();
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert(`Ошибка: ${error.detail || 'Неизвестная ошибка'}`);
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка при добавлении упражнения');
+            }
+        };
+        
+        // Закрыть модальное окно при клике вне его
+        window.onclick = function(event) {
+            const modal = document.getElementById('addExerciseModal');
+            if (event.target === modal) {
+                closeAddExerciseModal();
+            }
+        };
+    </script>
+</body>
+</html>

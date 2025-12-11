@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в систему - Fitness Tracker</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .login-container {
+            max-width: 400px;
+            margin: 50px auto;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-header h1 {
+            color: #2c3e50;
+        }
+        
+        .form-card {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #3498db;
+            text-decoration: none;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="/" class="logo">💪 FitnessTracker</a>
+            <a href="/" class="back-link">← На главную</a>
+        </nav>
+
+        <div class="login-container">
+            <div class="login-header">
+                <h1>🔑 Вход в систему</h1>
+                <p>Введите свои учетные данные</p>
+            </div>
+
+            <div class="form-card">
+                {% if error %}
+                <div class="message error">
+                    ❌ Неверный email/имя пользователя или пароль
+                </div>
+                {% endif %}
+
+                <form method="POST" action="/login">
+                    <div class="form-group">
+                        <label for="username">Email или имя пользователя:</label>
+                        <input type="text" id="username" name="username" required 
+                               placeholder="Введите email или имя пользователя">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Пароль:</label>
+                        <input type="password" id="password" name="password" required 
+                               placeholder="Введите пароль">
+                    </div>
+
+                    <button type="submit" class="btn" style="width: 100%;">
+                        🔑 Войти в систему
+                    </button>
+                </form>
+
+                <div style="text-align: center; margin-top: 25px; padding-top: 25px; border-top: 1px solid #eee;">
+                    <p>Нет аккаунта? <a href="/register">Зарегистрируйтесь</a></p>
+                    <p><small><a href="/">← Вернуться на главную</a></small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

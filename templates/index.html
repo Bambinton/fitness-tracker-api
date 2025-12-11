@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitness Tracker - Главная</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+            border-radius: 15px;
+            margin-bottom: 40px;
+        }
+        
+        .hero h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 50px 0;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        .btn-large {
+            padding: 15px 30px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="/" class="logo">💪 FitnessTracker</a>
+            <div class="nav-links">
+                {% if current_user %}
+                    <a href="/dashboard">📊 Мой кабинет</a>
+                    {% if current_user.role == "admin" %}
+                        <a href="/admin">👑 Админ-панель</a>
+                    {% endif %}
+                    <div class="user-info">
+                        <span>👤 {{ current_user.username }}</span>
+                        <a href="/logout" class="btn-logout">🚪 Выйти</a>
+                    </div>
+                {% else %}
+                    <a href="/login">🔑 Вход</a>
+                    <a href="/register">📝 Регистрация</a>
+                {% endif %}
+            </div>
+        </nav>
+
+        <div class="hero">
+            <h1>💪 Достигайте своих спортивных целей</h1>
+            <p style="font-size: 20px; opacity: 0.9;">Создавайте индивидуальные планы тренировок, отслеживайте прогресс и становитесь лучше каждый день</p>
+            
+            {% if not current_user %}
+            <div class="cta-buttons">
+                <a href="/register" class="btn btn-large" style="background: #2ecc71;">Начать бесплатно</a>
+                <a href="/login" class="btn btn-large" style="background: transparent; border: 2px solid white;">Войти в систему</a>
+            </div>
+            {% else %}
+            <div class="cta-buttons">
+                <a href="/dashboard" class="btn btn-large" style="background: #2ecc71;">Перейти в кабинет</a>
+                <a href="/plan/new" class="btn btn-large" style="background: #3498db;">Создать план</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">📋</div>
+                <h3>Планы тренировок</h3>
+                <p>Создавайте персонализированные планы тренировок с детальными описаниями упражнений</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Статистика прогресса</h3>
+                <p>Отслеживайте свой прогресс с наглядной статистикой и графиками</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">👥</div>
+                <h3>Сообщество</h3>
+                <p>Делитесь своими планами с другими или черпайте вдохновение из публичных тренировок</p>
+            </div>
+        </div>
+
+        {% if current_user %}
+        <div style="background: #f8f9fa; padding: 40px; border-radius: 15px; text-align: center;">
+            <h2>Быстрый доступ</h2>
+            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
+                <a href="/dashboard" class="btn">📋 Мои планы</a>
+                <a href="/stats" class="btn">📊 Статистика</a>
+                <a href="/plan/new" class="btn">➕ Новый план</a>
+                <a href="/api/docs" class="btn">📚 API Документация</a>
+            </div>
+        </div>
+        {% endif %}
+
+        <footer style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #7f8c8d;">
+            <p>Fitness Tracker © 2024 | <a href="/api/docs" style="color: #3498db;">API Documentation</a></p>
+        </footer>
+    </div>
+
+    <script>
+        // Динамическое обновление времени
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ru-RU');
+            const dateStr = now.toLocaleDateString('ru-RU', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            const timeElement = document.getElementById('current-time');
+            if (timeElement) {
+                timeElement.innerHTML = `${dateStr}<br>${timeStr}`;
+            }
+        }
+        
+        // Обновляем время каждую секунду
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой кабинет - Fitness Tracker</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo">
+            <i class="fas fa-dumbbell"></i> Fitness Tracker
+        </a>
+        <div class="nav-links">
+            <a href="/dashboard" class="active">
+                <i class="fas fa-clipboard-list"></i> Мои планы
+            </a>
+            {% if current_user.role == 'admin' %}
+            <a href="/admin">
+                <i class="fas fa-crown"></i> Админ-панель
+            </a>
+            {% endif %}
+            <div class="user-info">
+                <span><i class="fas fa-user-circle"></i> {{ current_user.username }}</span>
+                <a href="/logout" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> Выйти
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Заголовок и приветствие -->
+        <div class="section-header" style="margin-bottom: 30px;">
+            <div>
+                <h1>Добро пожаловать, {{ current_user.username }}! 👋</h1>
+                <p style="color: #666; margin-top: 5px;">Управляйте своими тренировочными планами</p>
+            </div>
+            <button class="btn btn-primary" onclick="showCreatePlanModal()">
+                <i class="fas fa-plus-circle"></i> Новый план
+            </button>
+        </div>
+
+        <!-- Статистика -->
+        <div class="stats">
+            <div class="stat-card">
+                <div style="font-size: 24px; margin-bottom: 10px; color: #667eea;">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <h3>Всего планов</h3>
+                <p id="totalPlans">0</p>
+            </div>
+            <div class="stat-card">
+                <div style="font-size: 24px; margin-bottom: 10px; color: #667eea;">
+                    <i class="fas fa-dumbbell"></i>
+                </div>
+                <h3>Всего упражнений</h3>
+                <p id="totalExercises">0</p>
+            </div>
+            <div class="stat-card">
+                <div style="font-size: 24px; margin-bottom: 10px; color: #667eea;">
+                    <i class="fas fa-globe"></i>
+                </div>
+                <h3>Публичные планы</h3>
+                <p id="publicPlans">0</p>
+            </div>
+        </div>
+
+        <!-- Список планов -->
+        <div class="section-header" style="margin-top: 40px;">
+            <h2><i class="fas fa-list-alt"></i> Мои тренировочные планы</h2>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="loadStats()">
+                    <i class="fas fa-sync-alt"></i> Обновить
+                </button>
+            </div>
+        </div>
+
+        <div id="plansList">
+            {% if plans %}
+                {% for plan in plans %}
+                <div class="plan-card">
+                    <div class="plan-header">
+                        <div>
+                            <h3>{{ plan.title }}</h3>
+                            <div style="display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap;">
+                                <span class="difficulty-badge {{ plan.difficulty }}">
+                                    {% if plan.difficulty == 'beginner' %}<i class="fas fa-seedling"></i> Начинающий
+                                    {% elif plan.difficulty == 'intermediate' %}<i class="fas fa-chart-line"></i> Средний
+                                    {% elif plan.difficulty == 'advanced' %}<i class="fas fa-fire"></i> Продвинутый
+                                    {% else %}<i class="fas fa-question"></i> Не указано{% endif %}
+                                </span>
+                                <span style="color: #888; font-size: 14px;">
+                                    <i class="far fa-clock"></i> {{ plan.duration_weeks or 0 }} недель
+                                </span>
+                            </div>
+                        </div>
+                        <span style="color: #888; font-size: 14px;">
+                            <i class="far fa-calendar"></i> {{ plan.created_at.strftime('%d.%m.%Y') }}
+                        </span>
+                    </div>
+                    
+                    {% if plan.description %}
+                    <div class="plan-description">
+                        <p>{{ plan.description }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="plan-info">
+                        <span>
+                            <i class="fas fa-user"></i> Владелец: {{ current_user.username }}
+                        </span>
+                        <span>
+                            {% if plan.is_public %}
+                                <i class="fas fa-globe" style="color: #51cf66;"></i> Публичный
+                            {% else %}
+                                <i class="fas fa-lock" style="color: #ff6b6b;"></i> Приватный
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="plan-actions">
+                        <a href="/plan/{{ plan.id }}" class="btn btn-primary">
+                            <i class="fas fa-eye"></i> Просмотр
+                        </a>
+                        <button class="btn btn-danger" onclick="deletePlan({{ plan.id }}, '{{ plan.title }}')">
+                            <i class="fas fa-trash"></i> Удалить
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div style="font-size: 60px; color: #ddd; margin-bottom: 20px;">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <h3 style="color: #888; margin-bottom: 15px;">У вас еще нет планов тренировок</h3>
+                    <p style="color: #aaa; margin-bottom: 25px;">Создайте свой первый план, чтобы начать тренировки</p>
+                    <button class="btn btn-primary" onclick="showCreatePlanModal()" style="padding: 15px 30px;">
+                        <i class="fas fa-plus-circle"></i> Создать первый план
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Модальное окно создания плана -->
+    <div id="createPlanModal" class="modal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <h2 style="margin: 0;"><i class="fas fa-plus-circle"></i> Создать новый план</h2>
+                <button onclick="closeCreatePlanModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #888;">&times;</button>
+            </div>
+            
+            <form id="createPlanForm">
+                <div style="margin-bottom: 20px;">
+                    <label for="title" style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">
+                        <i class="fas fa-heading"></i> Название плана *
+                    </label>
+                    <input type="text" id="title" name="title" placeholder="Например: Программа для набора массы" required>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label for="description" style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">
+                        <i class="fas fa-align-left"></i> Описание
+                    </label>
+                    <textarea id="description" name="description" placeholder="Опишите цель плана, особенности..."></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="difficulty" style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">
+                            <i class="fas fa-chart-line"></i> Уровень сложности
+                        </label>
+                        <select id="difficulty" name="difficulty">
+                            <option value="">Выберите уровень</option>
+                            <option value="beginner">🟢 Начинающий</option>
+                            <option value="intermediate">🟡 Средний</option>
+                            <option value="advanced">🔴 Продвинутый</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="duration_weeks" style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">
+                            <i class="far fa-calendar-alt"></i> Длительность (недель)
+                        </label>
+                        <input type="number" id="duration_weeks" name="duration_weeks" placeholder="4" min="1" max="52">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="is_public" name="is_public">
+                        <span>
+                            <i class="fas fa-globe"></i> Сделать план публичным
+                        </span>
+                    </label>
+                    <small style="color: #888; margin-left: 30px; display: block; margin-top: 5px;">
+                        Публичные планы видны другим пользователям
+                    </small>
+                </div>
+                
+                <div class="modal-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="closeCreatePlanModal()">
+                        <i class="fas fa-times"></i> Отмена
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check"></i> Создать план
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    const token = "{{ token }}";
+    
+    // Загружаем статистику
+    async function loadStats() {
+        try {
+            const response = await fetch('/api/stats', {
+                headers: {'Authorization': `Bearer ${token}`}
+            });
+            if (response.ok) {
+                const stats = await response.json();
+                
+                // Устанавливаем значения БЕЗ анимации при первой загрузке
+                document.getElementById('totalPlans').textContent = stats.total_plans;
+                document.getElementById('totalExercises').textContent = stats.total_exercises;
+                document.getElementById('publicPlans').textContent = stats.public_plans;
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки статистики:', error);
+            showMessage('error', 'Ошибка загрузки статистики');
+        }
+    }
+    
+    // Удаление плана
+    async function deletePlan(planId, planTitle) {
+        if (!confirm(`Удалить план "${planTitle}"?\nВсе упражнения в плане также будут удалены.`)) return;
+        
+        try {
+            const response = await fetch(`/api/workout-plans/${planId}`, {
+                method: 'DELETE',
+                headers: {'Authorization': `Bearer ${token}`}
+            });
+            
+            if (response.ok) {
+                showMessage('success', 'План успешно удален');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showMessage('error', 'Ошибка при удалении плана');
+            }
+        } catch (error) {
+            console.error('Ошибка:', error);
+            showMessage('error', 'Ошибка при удалении плана');
+        }
+    }
+    
+    // Показать сообщение
+    function showMessage(type, text) {
+        const message = document.createElement('div');
+        message.className = `message ${type}`;
+        message.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+            <span>${text}</span>
+        `;
+        
+        document.querySelector('.container').prepend(message);
+        
+        setTimeout(() => {
+            message.remove();
+        }, 5000);
+    }
+    
+    // Модальное окно создания плана
+    function showCreatePlanModal() {
+        document.getElementById('createPlanModal').style.display = 'flex';
+        document.getElementById('title').focus();
+    }
+    
+    function closeCreatePlanModal() {
+        document.getElementById('createPlanModal').style.display = 'none';
+        document.getElementById('createPlanForm').reset();
+    }
+    
+    // Создание нового плана
+    document.getElementById('createPlanForm').onsubmit = async function(e) {
+        e.preventDefault();
+        
+        const planData = {
+            title: document.getElementById('title').value,
+            description: document.getElementById('description').value,
+            difficulty: document.getElementById('difficulty').value || null,
+            duration_weeks: document.getElementById('duration_weeks').value ? 
+                parseInt(document.getElementById('duration_weeks').value) : null,
+            is_public: document.getElementById('is_public').checked
+        };
+        
+        try {
+            const response = await fetch('/api/workout-plans/', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(planData)
+            });
+            
+            if (response.ok) {
+                showMessage('success', 'План успешно создан!');
+                closeCreatePlanModal();
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                const error = await response.json();
+                showMessage('error', error.detail || 'Ошибка при создании плана');
+            }
+        } catch (error) {
+            console.error('Ошибка:', error);
+            showMessage('error', 'Ошибка при создании плана');
+        }
+    };
+    
+    // Закрыть модальное окно при клике вне его или Escape
+    window.onclick = function(event) {
+        const modal = document.getElementById('createPlanModal');
+        if (event.target === modal) {
+            closeCreatePlanModal();
+        }
+    };
+    
+    window.onkeydown = function(event) {
+        if (event.key === 'Escape') {
+            closeCreatePlanModal();
+        }
+    };
+    
+    // Загружаем статистику при загрузке страницы
+    window.onload = loadStats;
+</script>
+</body>
+</html>
