@@ -1,24 +1,33 @@
-import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-# Автоматически определяем, на Render мы или локально
-DATABASE_URL = os.environ.get("DATABASE_URL")
+# URL базы данных - SQLite файл
+SQLALCHEMY_DATABASE_URL = "sqlite:///./fitness.db"
 
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    # Исправляем для Render
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+# Создаем движок БД
+# check_same_thread=False - РАЗРЕШАЕТ работу из разных потоков
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False}  # ВАЖНО для SQLite на Render
+)
 
-if not DATABASE_URL:
-    # Локально - SQLite
-    DATABASE_URL = "sqlite:///./fitness.db"
+# Создаем фабрику сессий
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
 
-# Движок БД
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Базовый класс для моделей
 Base = declarative_base()
 
+# Функция для получения сессии БД
 def get_db():
+    """
+    Возвращает сессию базы данных.
+    Используется в FastAPI как зависимость.
+    """
     db = SessionLocal()
     try:
         yield db
