@@ -396,8 +396,7 @@ async def get_exercises_by_plan(
     result = db.execute(
         select(Exercise)
         .where(Exercise.workout_plan_id == plan_id)
-        .order_
-        by(Exercise.order)
+        .order_by(Exercise.order)
     )
     return result.scalars().all()
 
