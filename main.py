@@ -54,11 +54,24 @@ async def get_current_admin_api(current_user = Depends(get_current_user_api)):
 
 # ========== HTML РОУТЫ (ВЕБ-ИНТЕРФЕЙС) ==========
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
+async def home(request: Request, db: Session = Depends(get_db)):
     current_user = get_current_user_session(request)
+    
+    # Получаем все публичные планы тренировок для отображения на главной
+    result = db.execute(
+        select(WorkoutPlan, User.username, User.full_name)
+        .join(User, WorkoutPlan.owner_id == User.id)
+        .where(WorkoutPlan.is_public == True)
+        .order_by(desc(WorkoutPlan.created_at))
+        .limit(12)  # Показываем до 12 планов на главной
+    )
+    
+    public_plans_with_owners = result.all()
+    
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "current_user": current_user
+        "current_user": current_user,
+        "public_plans": public_plans_with_owners
     })
 
 @app.get("/login", response_class=HTMLResponse)
@@ -299,7 +312,7 @@ async def get_workout_plan(
 @app.put("/api/workout-plans/{plan_id}", response_model=WorkoutPlanRead)
 async def update_workout_plan(
     plan_id: int,
-    plan_data: WorkoutPlanUpdate,  # ИЗМЕНЕНО: используем WorkoutPlanUpdate вместо Create
+    plan_data: WorkoutPlanUpdate,
     current_user = Depends(get_current_user_api),
     db: Session = Depends(get_db)
 ):
@@ -314,7 +327,6 @@ async def update_workout_plan(
     if not plan:
         raise HTTPException(status_code=404, detail="План тренировок не найден")
     
-    # Обновляем только переданные поля
     update_data = plan_data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(plan, key, value)
@@ -351,7 +363,6 @@ async def create_exercise(
     current_user = Depends(get_current_user_api),
     db: Session = Depends(get_db)
 ):
-    # Проверяем, что план принадлежит пользователю
     result = db.execute(
         select(WorkoutPlan).where(
             WorkoutPlan.id == exercise_data.workout_plan_id,
@@ -373,7 +384,6 @@ async def get_exercises_by_plan(
     current_user = Depends(get_current_user_api),
     db: Session = Depends(get_db)
 ):
-    # Проверяем доступ к плану
     result = db.execute(
         select(WorkoutPlan).where(
             WorkoutPlan.id == plan_id,
@@ -386,18 +396,18 @@ async def get_exercises_by_plan(
     result = db.execute(
         select(Exercise)
         .where(Exercise.workout_plan_id == plan_id)
-        .order_by(Exercise.order)
+        .order_
+        by(Exercise.order)
     )
     return result.scalars().all()
 
 @app.put("/api/exercises/{exercise_id}", response_model=ExerciseRead)
 async def update_exercise(
     exercise_id: int,
-    exercise_data: ExerciseUpdate,  # НОВЫЙ: обновление упражнения
+    exercise_data: ExerciseUpdate,
     current_user = Depends(get_current_user_api),
     db: Session = Depends(get_db)
 ):
-    # Получаем упражнение и проверяем владельца плана
     result = db.execute(
         select(Exercise)
         .join(WorkoutPlan)
@@ -411,7 +421,6 @@ async def update_exercise(
     if not exercise:
         raise HTTPException(status_code=404, detail="Упражнение не найдено")
     
-    # Обновляем только переданные поля
     update_data = exercise_data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(exercise, key, value)
@@ -426,7 +435,6 @@ async def delete_exercise(
     current_user = Depends(get_current_user_api),
     db: Session = Depends(get_db)
 ):
-    # Получаем упражнение и проверяем владельца плана
     result = db.execute(
         select(Exercise)
         .join(WorkoutPlan)
@@ -541,7 +549,6 @@ async def admin_change_user_role(
     
     return {"message": f"Роль пользователя изменена на {user.role}"}
 
-# НОВЫЙ: Удаление пользователя админом
 @app.delete("/api/admin/users/{user_id}")
 async def admin_delete_user(
     user_id: int,
@@ -564,7 +571,6 @@ async def admin_delete_user(
     
     return {"message": f"Пользователь {user.username} удален"}
 
-# НОВЫЙ: Получение всех планов для админа
 @app.get("/api/admin/workout-plans", response_model=List[WorkoutPlanRead])
 async def admin_get_all_plans(
     skip: int = Query(0, ge=0),
@@ -615,7 +621,6 @@ async def get_current_user_info(
     
     return user
 
-# НОВЫЙ: Обновление данных пользователя
 @app.put("/api/users/me", response_model=UserRead)
 async def update_current_user(
     user_data: UserUpdate,
@@ -630,7 +635,6 @@ async def update_current_user(
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
     
-    # Проверяем уникальность email и username
     update_data = user_data.model_dump(exclude_unset=True)
     
     if "email" in update_data and update_data["email"] != user.email:
@@ -647,11 +651,9 @@ async def update_current_user(
         if existing:
             raise HTTPException(status_code=400, detail="Имя пользователя уже используется")
     
-    # Обновляем пароль если передан
     if "password" in update_data:
         update_data["hashed_password"] = get_password_hash(update_data.pop("password"))
     
-    # Применяем обновления
     for key, value in update_data.items():
         setattr(user, key, value)
     
@@ -711,10 +713,26 @@ async def api_login(
     
     return {"access_token": access_token, "token_type": "bearer"}
 
+# ========== ПУБЛИЧНЫЙ API ДЛЯ ГЛАВНОЙ СТРАНИЦЫ ==========
+@app.get("/api/public/workout-plans", response_model=List[WorkoutPlanRead])
+async def get_public_workout_plans(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(12, ge=1, le=50),
+    db: Session = Depends(get_db)
+):
+    """Получить список публичных планов тренировок (доступно без авторизации)"""
+    result = db.execute(
+        select(WorkoutPlan)
+        .where(WorkoutPlan.is_public == True)
+        .order_by(desc(WorkoutPlan.created_at))
+        .offset(skip)
+        .limit(limit)
+    )
+    return result.scalars().all()
+
 # ========== СИСТЕМНЫЕ РОУТЫ ==========
 @app.on_event("startup")
 def startup():
-    """СИНХРОННАЯ функция инициализации при запуске"""
     Base.metadata.create_all(bind=engine)
     
     with SessionLocal() as session:

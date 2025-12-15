@@ -56,6 +56,111 @@
             padding: 15px 30px;
             font-size: 18px;
         }
+        
+        /* Стили для карточек планов */
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+            margin: 40px 0;
+        }
+        
+        .plan-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border-left: 4px solid #3498db;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .plan-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        
+        .plan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+        
+        .plan-title {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 1.3em;
+        }
+        
+        .difficulty-badge {
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .beginner {
+            background: #2ecc71;
+        }
+        
+        .intermediate {
+            background: #f39c12;
+        }
+        
+        .advanced {
+            background: #e74c3c;
+        }
+        
+        .plan-description {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            flex-grow: 1;
+        }
+        
+        .plan-owner {
+            color: #95a5a6;
+            font-size: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .plan-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .plan-duration {
+            color: #95a5a6;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .empty-plans {
+            text-align: center;
+            padding: 60px 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            margin: 40px 0;
+        }
+        
+        .empty-plans-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -116,6 +221,92 @@
             </div>
         </div>
 
+        <!-- Секция с публичными планами тренировок -->
+        <div style="margin: 60px 0;">
+            <h2 style="text-align: center; margin-bottom: 40px;">
+                🔥 Публичные планы тренировок от пользователей
+            </h2>
+            
+            {% if public_plans %}
+            <div class="plans-grid">
+                {% for plan_data in public_plans %}
+                {% set plan = plan_data[0] %}
+                {% set owner_username = plan_data[1] %}
+                {% set owner_full_name = plan_data[2] %}
+                
+                <div class="plan-card">
+                    <div class="plan-header">
+                        <h3 class="plan-title">{{ plan.title }}</h3>
+                        <span class="difficulty-badge {{ plan.difficulty|default('beginner') }}">
+                            {{ plan.difficulty|default('beginner')|upper }}
+                        </span>
+                    </div>
+                    
+                    <!-- Информация о владельце -->
+                    <div class="plan-owner">
+                        👤 {% if owner_full_name %}{{ owner_full_name }} (@{{ owner_username }}){% else %}{{ owner_username }}{% endif %}
+                    </div>
+                    
+                    {% if plan.description %}
+                    <p class="plan-description">
+                        {{ plan.description[:120] }}{% if plan.description|length > 120 %}...{% endif %}
+                    </p>
+                    {% else %}
+                    <p class="plan-description" style="color: #bdc3c7;">
+                        Описание отсутствует
+                    </p>
+                    {% endif %}
+                    
+                    <div class="plan-footer">
+                        <div class="plan-duration">
+                            {% if plan.duration_weeks %}
+                            📅 {{ plan.duration_weeks }} недель
+                            {% else %}
+                            📅 Длительность не указана
+                            {% endif %}
+                        </div>
+                        
+                        {% if current_user %}
+                        <a href="/plan/{{ plan.id }}" class="btn" style="padding: 8px 16px; font-size: 14px;">
+                            👀 Посмотреть
+                        </a>
+                        {% else %}
+                        <a href="/login" class="btn" style="padding: 8px 16px; font-size: 14px;">
+                            🔐 Войти для просмотра
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            {% if not current_user %}
+            <div style="text-align: center; margin-top: 40px;">
+                <p style="font-size: 18px; color: #7f8c8d;">
+                    Хотите создать свой план тренировок?
+                </p>
+                <a href="/register" class="btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                                  color: white; padding: 15px 30px; font-size: 16px;">
+                    🏋️ Начать тренироваться бесплатно
+                </a>
+            </div>
+            {% endif %}
+            
+            {% else %}
+            <div class="empty-plans">
+                <div class="empty-plans-icon">📭</div>
+                <h3 style="color: #95a5a6;">Пока нет публичных планов тренировок</h3>
+                <p style="font-size: 18px; color: #bdc3c7;">
+                    {% if current_user %}
+                    Будьте первым! <a href="/dashboard" style="color: #3498db; text-decoration: none;">Создайте план</a> и отметьте его как публичный
+                    {% else %}
+                    <a href="/register" style="color: #3498db; text-decoration: none;">Зарегистрируйтесь</a> и создайте первый публичный план
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+
         {% if current_user %}
         <div style="background: #f8f9fa; padding: 40px; border-radius: 15px; text-align: center;">
             <h2>Быстрый доступ</h2>
@@ -134,6 +325,21 @@
     </div>
 
     <script>
+        // Анимация для плавного появления карточек
+        document.addEventListener('DOMContentLoaded', function() {
+            const planCards = document.querySelectorAll('.plan-card');
+            planCards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+        
         // Динамическое обновление времени
         function updateTime() {
             const now = new Date();
@@ -151,7 +357,6 @@
             }
         }
         
-        // Обновляем время каждую секунду
         setInterval(updateTime, 1000);
         updateTime();
     </script>
