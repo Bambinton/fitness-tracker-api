@@ -41,3 +41,34 @@ source venv/bin/activate
 
 # Установка зависимостей
 pip install -r requirements.txt
+```
+
+### 2. Запуск приложения
+```bash
+uvicorn main:app --reload
+```
+
+### 3. Переменные окружения
+Приложение по умолчанию использует SQLite-файл `fitness.db` в корне проекта. Для локального запуска дополнительных переменных не требуется. При необходимости строку подключения можно изменить в `database.py` (переменная `SQLALCHEMY_DATABASE_URL`).
+
+### 4. Доступ к API и документации
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+- OpenAPI JSON: http://localhost:8000/openapi.json
+
+### 5. Базовая аутентификация
+После первого старта автоматически создается администратор по умолчанию:
+- **Логин:** admin@example.com
+- **Пароль:** admin123
+
+Получить JWT можно через `/api/auth/login` (form-data: `username`, `password`). Токен нужно передавать в заголовке `Authorization: Bearer <token>`.
+
+### 6. Основные эндпоинты
+- CRUD планы тренировок: `/api/workout-plans/`
+- CRUD упражнения: `/api/exercises/`
+- Статистика пользователя: `/api/stats`
+- Публичные планы (без авторизации): `/api/public/workout-plans`
+- Админ-раздел: `/api/admin/...`
+
+### 7. Статический интерфейс
+Веб-страницы (логин, регистрация, дашборд, админка) доступны по адресу `http://localhost:8000/` и используют те же API.

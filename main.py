@@ -24,8 +24,8 @@ app = FastAPI(
     title="Fitness Tracker API",
     description="API для учета спортивных тренировок",
     version="1.0.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc"
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 templates = Jinja2Templates(directory="templates")
@@ -263,7 +263,12 @@ async def logout():
     return response
 
 # ========== API РОУТЫ (CRUD ДЛЯ ПЛАНОВ ТРЕНИРОВОК) ==========
-@app.post("/api/workout-plans/", response_model=WorkoutPlanRead)
+@app.post(
+    "/api/workout-plans/",
+    response_model=WorkoutPlanRead,
+    summary="Создать план тренировки",
+    description="Создает новый план тренировки для текущего пользователя"
+)
 async def create_workout_plan(
     plan_data: WorkoutPlanCreate,
     current_user = Depends(get_current_user_api),
@@ -275,7 +280,12 @@ async def create_workout_plan(
     db.refresh(db_plan)
     return db_plan
 
-@app.get("/api/workout-plans/", response_model=List[WorkoutPlanRead])
+@app.get(
+    "/api/workout-plans/",
+    response_model=List[WorkoutPlanRead],
+    summary="Получить планы пользователя",
+    description="Возвращает список планов тренировок текущего пользователя с пагинацией"
+)
 async def get_workout_plans(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
@@ -291,7 +301,12 @@ async def get_workout_plans(
     )
     return result.scalars().all()
 
-@app.get("/api/workout-plans/{plan_id}", response_model=WorkoutPlanRead)
+@app.get(
+    "/api/workout-plans/{plan_id}",
+    response_model=WorkoutPlanRead,
+    summary="Получить план по ID",
+    description="Возвращает конкретный план пользователя или 404, если он не найден"
+)
 async def get_workout_plan(
     plan_id: int,
     current_user = Depends(get_current_user_api),
@@ -309,7 +324,12 @@ async def get_workout_plan(
         raise HTTPException(status_code=404, detail="План тренировок не найден")
     return plan
 
-@app.put("/api/workout-plans/{plan_id}", response_model=WorkoutPlanRead)
+@app.put(
+    "/api/workout-plans/{plan_id}",
+    response_model=WorkoutPlanRead,
+    summary="Обновить план",
+    description="Частично обновляет план тренировок текущего пользователя"
+)
 async def update_workout_plan(
     plan_id: int,
     plan_data: WorkoutPlanUpdate,
@@ -335,7 +355,11 @@ async def update_workout_plan(
     db.refresh(plan)
     return plan
 
-@app.delete("/api/workout-plans/{plan_id}")
+@app.delete(
+    "/api/workout-plans/{plan_id}",
+    summary="Удалить план",
+    description="Удаляет план тренировок пользователя по идентификатору"
+)
 async def delete_workout_plan(
     plan_id: int,
     current_user = Depends(get_current_user_api),
@@ -357,7 +381,12 @@ async def delete_workout_plan(
     return {"message": "План тренировок удален"}
 
 # ========== API ДЛЯ УПРАЖНЕНИЙ ==========
-@app.post("/api/exercises/", response_model=ExerciseRead)
+@app.post(
+    "/api/exercises/",
+    response_model=ExerciseRead,
+    summary="Добавить упражнение",
+    description="Добавляет новое упражнение к плану текущего пользователя"
+)
 async def create_exercise(
     exercise_data: ExerciseCreate,
     current_user = Depends(get_current_user_api),
@@ -378,7 +407,12 @@ async def create_exercise(
     db.refresh(db_exercise)
     return db_exercise
 
-@app.get("/api/exercises/plan/{plan_id}", response_model=List[ExerciseRead])
+@app.get(
+    "/api/exercises/plan/{plan_id}",
+    response_model=List[ExerciseRead],
+    summary="Список упражнений плана",
+    description="Возвращает упражнения конкретного плана в порядке выполнения"
+)
 async def get_exercises_by_plan(
     plan_id: int,
     current_user = Depends(get_current_user_api),
@@ -400,7 +434,12 @@ async def get_exercises_by_plan(
     )
     return result.scalars().all()
 
-@app.put("/api/exercises/{exercise_id}", response_model=ExerciseRead)
+@app.put(
+    "/api/exercises/{exercise_id}",
+    response_model=ExerciseRead,
+    summary="Обновить упражнение",
+    description="Частично обновляет упражнение, принадлежащее пользователю"
+)
 async def update_exercise(
     exercise_id: int,
     exercise_data: ExerciseUpdate,
@@ -428,7 +467,11 @@ async def update_exercise(
     db.refresh(exercise)
     return exercise
 
-@app.delete("/api/exercises/{exercise_id}")
+@app.delete(
+    "/api/exercises/{exercise_id}",
+    summary="Удалить упражнение",
+    description="Удаляет упражнение, если оно принадлежит плану пользователя"
+)
 async def delete_exercise(
     exercise_id: int,
     current_user = Depends(get_current_user_api),
@@ -452,7 +495,12 @@ async def delete_exercise(
     return {"message": "Упражнение удалено"}
 
 # ========== СТАТИСТИКА ==========
-@app.get("/api/stats", response_model=StatsResponse)
+@app.get(
+    "/api/stats",
+    response_model=StatsResponse,
+    summary="Получить статистику пользователя",
+    description="Возвращает количество планов, упражнений и публичных программ для текущего пользователя"
+)
 async def get_user_stats(
     current_user = Depends(get_current_user_api),
     db: Session = Depends(get_db)
@@ -485,7 +533,12 @@ async def get_user_stats(
     )
 
 # ========== АДМИНИСТРАТИВНЫЕ API ==========
-@app.get("/api/admin/users", response_model=List[UserRead])
+@app.get(
+    "/api/admin/users",
+    response_model=List[UserRead],
+    summary="Список пользователей",
+    description="Получает список всех пользователей (доступно только администраторам)"
+)
 async def admin_get_users(
     admin = Depends(get_current_admin_api),
     db: Session = Depends(get_db)
@@ -495,7 +548,11 @@ async def admin_get_users(
     )
     return result.scalars().all()
 
-@app.get("/api/admin/stats")
+@app.get(
+    "/api/admin/stats",
+    summary="Системная статистика",
+    description="Возвращает агрегированные метрики по пользователям, планам и упражнениям"
+)
 async def admin_stats(
     admin = Depends(get_current_admin_api),
     db: Session = Depends(get_db)
@@ -522,7 +579,11 @@ async def admin_stats(
         "users_by_role": roles_stats
     }
 
-@app.put("/api/admin/users/{user_id}/role")
+@app.put(
+    "/api/admin/users/{user_id}/role",
+    summary="Изменить роль пользователя",
+    description="Позволяет администратору обновить роль выбранного пользователя"
+)
 async def admin_change_user_role(
     user_id: int,
     role_update: AdminUserUpdate,
@@ -548,7 +609,11 @@ async def admin_change_user_role(
     
     return {"message": f"Роль пользователя изменена на {user.role}"}
 
-@app.delete("/api/admin/users/{user_id}")
+@app.delete(
+    "/api/admin/users/{user_id}",
+    summary="Удалить пользователя",
+    description="Удаляет учетную запись пользователя (недоступно для самого администратора)"
+)
 async def admin_delete_user(
     user_id: int,
     admin = Depends(get_current_admin_api),
@@ -570,7 +635,12 @@ async def admin_delete_user(
     
     return {"message": f"Пользователь {user.username} удален"}
 
-@app.get("/api/admin/workout-plans", response_model=List[WorkoutPlanRead])
+@app.get(
+    "/api/admin/workout-plans",
+    response_model=List[WorkoutPlanRead],
+    summary="Получить все планы",
+    description="Возвращает все планы тренировок в системе для административного обзора"
+)
 async def admin_get_all_plans(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
@@ -585,7 +655,11 @@ async def admin_get_all_plans(
     )
     return result.scalars().all()
 
-@app.delete("/api/admin/workout-plans/{plan_id}")
+@app.delete(
+    "/api/admin/workout-plans/{plan_id}",
+    summary="Удалить план администратором",
+    description="Удаляет план тренировок независимо от владельца"
+)
 async def admin_delete_workout_plan(
     plan_id: int,
     admin = Depends(get_current_admin_api),
@@ -605,7 +679,12 @@ async def admin_delete_workout_plan(
     return {"message": f"План тренировок {plan_id} удален администратором"}
 
 # ========== API ДЛЯ ПОЛЬЗОВАТЕЛЯ ==========
-@app.get("/api/users/me", response_model=UserRead)
+@app.get(
+    "/api/users/me",
+    response_model=UserRead,
+    summary="Текущий пользователь",
+    description="Возвращает профиль текущего пользователя по JWT"
+)
 async def get_current_user_info(
     current_user = Depends(get_current_user_api),
     db: Session = Depends(get_db)
@@ -620,7 +699,12 @@ async def get_current_user_info(
     
     return user
 
-@app.put("/api/users/me", response_model=UserRead)
+@app.put(
+    "/api/users/me",
+    response_model=UserRead,
+    summary="Обновить профиль",
+    description="Обновляет email, имя пользователя, ФИО или пароль текущего пользователя"
+)
 async def update_current_user(
     user_data: UserUpdate,
     current_user = Depends(get_current_user_api),
@@ -661,7 +745,12 @@ async def update_current_user(
     return user
 
 # ========== API АУТЕНТИФИКАЦИИ ==========
-@app.post("/api/auth/register", response_model=UserRead)
+@app.post(
+    "/api/auth/register",
+    response_model=UserRead,
+    summary="Регистрация",
+    description="Создает нового пользователя и хеширует пароль"
+)
 async def api_register(
     user_data: UserCreate,
     db: Session = Depends(get_db)
@@ -688,7 +777,12 @@ async def api_register(
     db.refresh(new_user)
     return new_user
 
-@app.post("/api/auth/login", response_model=Token)
+@app.post(
+    "/api/auth/login",
+    response_model=Token,
+    summary="Логин",
+    description="Выдает JWT токен по валидным учетным данным"
+)
 async def api_login(
     username: str = Form(...),
     password: str = Form(...),
@@ -713,7 +807,12 @@ async def api_login(
     return {"access_token": access_token, "token_type": "bearer"}
 
 # ========== ПУБЛИЧНЫЙ API ДЛЯ ГЛАВНОЙ СТРАНИЦЫ ==========
-@app.get("/api/public/workout-plans", response_model=List[WorkoutPlanRead])
+@app.get(
+    "/api/public/workout-plans",
+    response_model=List[WorkoutPlanRead],
+    summary="Публичные планы",
+    description="Список публичных планов тренировок, доступный без авторизации"
+)
 async def get_public_workout_plans(
     skip: int = Query(0, ge=0),
     limit: int = Query(12, ge=1, le=50),
@@ -756,11 +855,15 @@ def startup():
 async def health():
     return {"status": "ok", "service": "fitness-tracker"}
 
-@app.get("/api/docs-info")
+@app.get(
+    "/api/docs-info",
+    summary="Информация о документации",
+    description="Указывает пути к Swagger UI, ReDoc и OpenAPI"
+)
 async def docs_info():
     return {
-        "swagger": "/api/docs",
-        "redoc": "/api/redoc",
+        "swagger": "/docs",
+        "redoc": "/redoc",
         "openapi": "/openapi.json"
     }
 
